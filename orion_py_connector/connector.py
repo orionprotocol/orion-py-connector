@@ -1,4 +1,5 @@
 import requests
+import warnings
 from eip712_structs import make_domain, EIP712Struct, Address, String, Uint
 from web3.auto import w3
 from eth_account.messages import encode_defunct
@@ -20,33 +21,50 @@ class Order(EIP712Struct):
     buySide = Uint(8)
 
 
-class APIService:
+class Client:
     def __init__(self,
-                 private_key,
-                 broker_url="https://stage.orionprotocol.io/api/broker",
-                 backend_url="https://stage.orionprotocol.io/backend/api/v1"):
+                 private_key: str,
+                 broker_url: str = "https://stage.orionprotocol.io/api/broker",
+                 backend_url: str = "https://stage.orionprotocol.io/backend/api/v1"):
+
+        if len(private_key) == 0:
+            raise Exception('You need to specify a private key')
 
         self.private_key = private_key
         self.broker_url = broker_url
         self.backend_url = backend_url
 
-    def get_balance(self, address):
+    def __isValidAddress(self, address: str):
+        """ Check if address is valid or throw error """
+        isValidAddress = w3.isAddress(address)
+        if not isValidAddress:
+            raise Exception('Invalid address specified')
+
+    def get_balance(self, address: str):
+        self.__isValidAddress(address)
+
         url = f'{self.broker_url}/getBalance/{address}'
         result = requests.get(url)
         return result.json()
 
-    def get_contract_balance(self, address):
+    def get_contract_balance(self, address: str):
+        self.__isValidAddress(address)
+
         url = f'{self.broker_url}/getContractBalance/{address}'
         result = requests.get(url)
         return result.json()
 
-    def get_order_history(self, pair, address):
+    def get_order_history(self, address: str, pair: str):
+        self.__isValidAddress(address)
+
         url = f'{self.backend_url}/orderHistory'
         params = {'symbol': pair, 'address': address}
         result = requests.get(url, params)
         return result.json()
 
-    def get_open_orders(self, pair, address):
+    def get_open_orders(self, address: str, pair: str):
+        self.__isValidAddress(address)
+
         history = self.get_order_history(pair, address)
         open_orders = list(filter(lambda x: x['status'] == "OPEN", history))
         return open_orders
