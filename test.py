@@ -1,6 +1,6 @@
 """ Temporay test file before writing proper tests """
 
-from orion_connector import connector
+from orion_py_connector import connector
 
 """ Create API connector """
 client = connector.APIService(
