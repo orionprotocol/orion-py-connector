@@ -4,10 +4,12 @@ from eip712_structs import make_domain, EIP712Struct, Address, String, Uint
 from web3.auto import w3
 from eth_account.messages import encode_defunct
 
-""" Order Struct according to the EIP-712 Standard """
+
+VALID_PAIRS = ['ORN-USDT', 'ETH-USDT']
 
 
 class Order(EIP712Struct):
+    """ Order Struct according to the EIP-712 Standard """
     senderAddress = Address()
     matcherAddress = Address()
     baseAsset = Address()
@@ -40,6 +42,11 @@ class Client:
         if not isValidAddress:
             raise Exception('Invalid address specified')
 
+    def __isValidPair(self, pair: str):
+        """ Check if pair is valid or throw error """
+        if not pair in VALID_PAIRS:
+            raise Exception('Invalid pair specified')
+
     def get_balance(self, address: str):
         self.__isValidAddress(address)
 
@@ -56,6 +63,7 @@ class Client:
 
     def get_order_history(self, address: str, pair: str):
         self.__isValidAddress(address)
+        self.__isValidPair(pair)
 
         url = f'{self.backend_url}/orderHistory'
         params = {'symbol': pair, 'address': address}
@@ -64,6 +72,7 @@ class Client:
 
     def get_open_orders(self, address: str, pair: str):
         self.__isValidAddress(address)
+        self.__isValidPair(pair)
 
         history = self.get_order_history(pair, address)
         open_orders = list(filter(lambda x: x['status'] == "OPEN", history))
