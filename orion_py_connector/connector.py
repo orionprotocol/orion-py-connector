@@ -3,9 +3,8 @@ import warnings
 from eip712_structs import make_domain, EIP712Struct, Address, String, Uint
 from web3.auto import w3
 from eth_account.messages import encode_defunct
-
-
-VALID_PAIRS = ['ORN-USDT', 'ETH-USDT']
+from orion_py_connector.utils import isValidAddress, isValidPair
+from orion_py_connector.orderbook import Orderbook
 
 
 class Order(EIP712Struct):
@@ -35,48 +34,41 @@ class Client:
         self.private_key = private_key
         self.broker_url = broker_url
         self.backend_url = backend_url
+        self.orderbook = Orderbook()
 
-    def __isValidAddress(self, address: str):
-        """ Check if address is valid or throw error """
-        isValidAddress = w3.isAddress(address)
-        if not isValidAddress:
-            raise Exception('Invalid address specified')
-
-    def __isValidPair(self, pair: str):
-        """ Check if pair is valid or throw error """
-        if not pair in VALID_PAIRS:
-            raise Exception('Invalid pair specified')
-
-    def get_balance(self, address: str):
-        self.__isValidAddress(address)
+    def getBalances(self, address: str):
+        isValidAddress(address)
 
         url = f'{self.broker_url}/getBalance/{address}'
         result = requests.get(url)
         return result.json()
 
-    def get_contract_balance(self, address: str):
-        self.__isValidAddress(address)
+    def getContractBalances(self, address: str):
+        isValidAddress(address)
 
         url = f'{self.broker_url}/getContractBalance/{address}'
         result = requests.get(url)
         return result.json()
 
-    def get_order_history(self, address: str, pair: str):
-        self.__isValidAddress(address)
-        self.__isValidPair(pair)
+    def getOrderHistory(self, address: str, pair: str):
+        isValidAddress(address)
+        isValidPair(pair)
 
         url = f'{self.backend_url}/orderHistory'
         params = {'symbol': pair, 'address': address}
         result = requests.get(url, params)
         return result.json()
 
-    def get_open_orders(self, address: str, pair: str):
-        self.__isValidAddress(address)
-        self.__isValidPair(pair)
+    def getOpenOrders(self, address: str, pair: str):
+        isValidAddress(address)
+        isValidPair(pair)
 
-        history = self.get_order_history(pair, address)
+        history = self.getOrderHistory(pair, address)
         open_orders = list(filter(lambda x: x['status'] == "OPEN", history))
         return open_orders
+
+    def getOrderbook(self, pair: str):
+        isValidPair(pair)
 
     def test_sign(self):
         domain = make_domain(name="Orion Exchange", version="1", chainId=3,
