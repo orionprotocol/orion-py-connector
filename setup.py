@@ -9,8 +9,9 @@ setup(name='orion-py-connector',
       license='MIT',
       packages=['orion_py_connector'],
       install_requires=[
-          'requests',
           'eip712-structs',
-          'web3'
+          'pytest',
+          'requests',
+          'web3',
       ],
       zip_safe=False)

@@ -1,26 +1,17 @@
-from orion_py_connector.orderbook import Orderbook
-from orion_py_connector.utils import isValidAddress, isValidPair
-import requests
-import warnings
-from eip712_structs import make_domain, EIP712Struct, Address, String, Uint, Bytes
+import logging
 from web3.auto import w3
-from eth_account.messages import SignableMessage, HexBytes
-from eth_account import Account
+from json import dumps
+import time
+import warnings
+import requests
+from orion_py_connector.tokens import VALID_PAIRS, isValidPair, getAssetsFromPair
+from orion_py_connector.utils import (DEFAULT_EXPIRATION, MATCHER_ADDRESS, MATCHER_FEE_PERCENT,
+                                      isValidAddress, signEIP712Struct, hashOrder, toBaseUnit, Order, DeleteOrder)
 
+logging.getLogger('orion_py_connector.connector').addHandler(
+    logging.NullHandler())
 
-class Order(EIP712Struct):
-    """ Order Struct according to the EIP-712 Standard """
-    senderAddress = Address()
-    matcherAddress = Address()
-    baseAsset = Address()
-    quoteAsset = Address()
-    matcherFeeAsset = Address()
-    amount = Uint(64)
-    price = Uint(64)
-    matcherFee = Uint(64)
-    nonce = Uint(64)
-    expiration = Uint(64)
-    buySide = Uint(8)
+headers = {'content-type': 'application/json'}
 
 
 class Client:
@@ -35,9 +26,9 @@ class Client:
         self.private_key = private_key
         self.broker_url = broker_url
         self.backend_url = backend_url
-        self.orderbook = Orderbook()
 
     def getBalances(self, address: str):
+        logging.debug(f'Calling getBalances with args: {address}')
         isValidAddress(address)
 
         url = f'{self.broker_url}/getBalance/{address}'
@@ -45,6 +36,7 @@ class Client:
         return result.json()
 
     def getContractBalances(self, address: str):
+        logging.debug(f'Calling getContractBalances with args: {address}')
         isValidAddress(address)
 
         url = f'{self.broker_url}/getContractBalance/{address}'
@@ -52,6 +44,7 @@ class Client:
         return result.json()
 
     def getOrderHistory(self, address: str, pair: str):
+        logging.debug(f'Calling getOrderHistory with args: {address}, {pair}')
         isValidAddress(address)
         isValidPair(pair)
 
@@ -61,49 +54,82 @@ class Client:
         return result.json()
 
     def getOpenOrders(self, address: str, pair: str):
+        logging.debug(f'Calling getOpenOrders with args: {address}, {pair}')
         isValidAddress(address)
         isValidPair(pair)
 
-        history = self.getOrderHistory(pair, address)
+        history = self.getOrderHistory(address, pair)
         open_orders = list(filter(lambda x: x['status'] == "OPEN", history))
         return open_orders
 
-    def getOrderbook(self, pair: str):
+    def getOrderbook(self, pair: str, depth: int = 20):
+        logging.debug(f'Calling getOrderbook with args: {pair}, {depth}')
         isValidPair(pair)
 
-    def test_sign(self):
+        url = f'{self.backend_url}/orderbook'
+        params = {'pair': pair, 'depth': depth}
+        result = requests.get(url, params)
+        return result.json()
 
-        my_domain = make_domain(name="Orion Exchange", version="1", chainId=3,
-                                salt="0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a557")
+    def cancelOrder(self, address: str, id: int) -> bool:
+        logging.debug(f'Calling cancelOrder with args: {address}, {id}')
+        cancelOrder = DeleteOrder(senderAddress=address, id=id)
+        signature = signEIP712Struct(cancelOrder, self.private_key)
 
-        order = Order(senderAddress="0xB0Fc7251682f639dcFc5beC6Dc86E30BA18Eb9fc",
-                      matcherAddress="0x1FF516E5ce789085CFF86d37fc27747dF852a80a",
-                      baseAsset="0x0000000000000000000000000000000000000000",
-                      quoteAsset="0xfc1cd13a7f126efd823e373c4086f69beb8611c2",
-                      matcherFeeAsset="0xfc1cd13a7f126efd823e373c4086f69beb8611c2",
-                      amount=19960000,
-                      price=61879000000,
-                      matcherFee=24827388,
-                      nonce=1607011557478,
-                      expiration=1609517157478,
-                      buySide=0
-                      )
-        message = order.signable_bytes(my_domain)
-        sm = SignableMessage(
-            HexBytes(b'\x01'),
-            message[2: 34],
-            message[34: 66]
-        )
+        payload = cancelOrder.data_dict()
+        payload['signature'] = signature
 
-        account = Account.from_key(self.private_key)
-        signed = Account.sign_message(sm, account.key)
-        new_addr = Account.recover_message(sm, signature=signed.signature)
-        assert new_addr == account.address
+        print(payload)
+        url = f'{self.backend_url}/order'
+        response = requests.request('delete',
+                                    url, json=dumps(payload), headers=headers)
 
-        signature = signed.signature.hex()
-        expected_signature = "0x6c03305cfec161bd4589853993ef6051edd8babbcb094f1031d5df891c03c6e46912d4903669449030bb0e71c08b77b8e7a9a18b4a13e75a7bbbbdf21d1ea0831c"
+        return response.status_code == 200
 
-        print(signature)
-        print(expected_signature)
-        print(signature == expected_signature)
+    def cancelAllOrders(self, address: str):
+        logging.debug(f'Calling cancelAllOrders with args: {address}')
+        isValidAddress(address)
+        for pair in VALID_PAIRS:
+            openOrders = self.getOpenOrders(address, pair)
+            for order in openOrders:
+                if order['id'] > 0:
+                    self.cancelOrder(address, order['id'])
         return None
+
+    def createOrder(self, address: str, pair: str, buy: bool, amount: int, price: int):
+        logging.debug(
+            f'Calling createOrder with args: {address}, {pair}, {buy}')
+        isValidAddress(address)
+        isValidPair(pair)
+
+        assets = getAssetsFromPair(pair)
+        matcherFeeAsset = assets[0] if buy else assets[1]
+        matcherFee = amount * MATCHER_FEE_PERCENT if buy else amount * \
+            price * MATCHER_FEE_PERCENT
+
+        currentTimestamp = int(time.time()*1000)
+
+        order = Order(senderAddress=address,
+                      matcherAddress=MATCHER_ADDRESS,
+                      baseAsset=assets[0],
+                      quoteAsset=assets[1],
+                      matcherFeeAsset=matcherFeeAsset,
+                      amount=toBaseUnit(amount),
+                      price=toBaseUnit(price),
+                      matcherFee=toBaseUnit(matcherFee),
+                      nonce=currentTimestamp,
+                      expiration=currentTimestamp+DEFAULT_EXPIRATION,
+                      buySide=1 if buy else 0
+                      )
+
+        payload = order.data_dict()
+        payload['id'] = hashOrder(order)
+        payload['signature'] = signEIP712Struct(order, self.private_key)
+
+        print(payload)
+
+        url = f'{self.backend_url}/order'
+        response = requests.post(
+            url, dumps(payload), headers=headers)
+
+        return response.json()
