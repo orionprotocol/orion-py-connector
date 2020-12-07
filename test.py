@@ -5,7 +5,7 @@ from orion_py_connector.tokens import getAssetsFromPair
 import logging
 import sys
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
-                    level=logging.INFO,
+                    level=logging.DEBUG,
                     stream=sys.stdout)
 
 """ Create API connector """
