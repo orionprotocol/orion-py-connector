@@ -32,16 +32,20 @@ class Client:
         isValidAddress(address)
 
         url = f'{self.broker_url}/getBalance/{address}'
-        result = requests.get(url)
-        return result.json()
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
 
     def getContractBalances(self, address: str):
         logging.debug(f'Calling getContractBalances with args: {address}')
         isValidAddress(address)
 
         url = f'{self.broker_url}/getContractBalance/{address}'
-        result = requests.get(url)
-        return result.json()
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
 
     def getOrderHistory(self, address: str, pair: str):
         logging.debug(f'Calling getOrderHistory with args: {address}, {pair}')
@@ -50,8 +54,10 @@ class Client:
 
         url = f'{self.backend_url}/orderHistory'
         params = {'symbol': pair, 'address': address}
-        result = requests.get(url, params)
-        return result.json()
+        response = requests.get(url, params)
+        if response.status_code == 200:
+            return response.json()
+        return None
 
     def getOpenOrders(self, address: str, pair: str):
         logging.debug(f'Calling getOpenOrders with args: {address}, {pair}')
@@ -59,6 +65,8 @@ class Client:
         isValidPair(pair)
 
         history = self.getOrderHistory(address, pair)
+        if history == None:
+            return None
         open_orders = list(filter(lambda x: x['status'] == "OPEN", history))
         return open_orders
 
@@ -68,8 +76,10 @@ class Client:
 
         url = f'{self.backend_url}/orderbook'
         params = {'pair': pair, 'depth': depth}
-        result = requests.get(url, params)
-        return result.json()
+        response = requests.get(url, params)
+        if response.status_code == 200:
+            return response.json()
+        return None
 
     def cancelOrder(self, address: str, id: int) -> bool:
         logging.debug(f'Calling cancelOrder with args: {address}, {id}')
@@ -89,12 +99,17 @@ class Client:
     def cancelAllOrders(self, address: str):
         logging.debug(f'Calling cancelAllOrders with args: {address}')
         isValidAddress(address)
+
+        allOrderCanceled = True
+
         for pair in VALID_PAIRS:
             openOrders = self.getOpenOrders(address, pair)
             for order in openOrders:
                 if order['id'] > 0:
-                    self.cancelOrder(address, order['id'])
-        return None
+                    success = self.cancelOrder(address, order['id'])
+                    if not success:
+                        allOrderCanceled = False
+        return allOrderCanceled
 
     def createOrder(self, address: str, pair: str, buy: bool, amount: int, price: int):
         logging.debug(
@@ -126,10 +141,12 @@ class Client:
         payload['id'] = hashOrder(order)
         payload['signature'] = signEIP712Struct(order, self.private_key)
 
-        print(payload)
+        logging.info(f'Order: {payload}')
 
         url = f'{self.backend_url}/order'
         response = requests.post(
             url, dumps(payload), headers=headers)
 
-        return response.json()
+        if response.status_code == 200:
+            return response.json()
+        return None

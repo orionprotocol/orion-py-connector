@@ -1,21 +1,21 @@
 from orion_py_connector.tokens import getAssetsFromPair, isValidPair, TOKENS
 
 
-def getAssetsFromValidPair():
+def test_getAssetsFromValidPair():
     assets = getAssetsFromPair('ORN-USDT')
     assert assets == [TOKENS['ORN'], TOKENS['USDT']]
 
 
-def getAssetsFromInvalidPair():
-    assets = getAssetsFromPair('ORN-ERD')
+def test_getAssetsFromInvalidPair():
+    assets = getAssetsFromPair('ORN-XRP')
     assert assets == None
 
 
 def test_isInvalidPair():
-    isValid = isValidPair('ORN-ERD')
+    isValid = isValidPair('ORN-XRP')
     assert isValid == False
 
 
-def test_isVaidPair():
+def test_isValidPair():
     isValid = isValidPair('ORN-USDT')
     assert isValid

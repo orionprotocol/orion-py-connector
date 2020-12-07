@@ -16,11 +16,10 @@ def getAssetsFromPair(pair: str) -> list:
     arr = pair.split('-')
     if not len(arr) == 2:
         return None
-    base = TOKENS[arr[0]]
-    if not len(base) > 0:
-        return None
-    quote = TOKENS[arr[1]]
-    if not len(quote) > 0:
+
+    base = TOKENS.get(arr[0])
+    quote = TOKENS.get(arr[1])
+    if not base or not quote:
         return None
 
     return [base, quote]
