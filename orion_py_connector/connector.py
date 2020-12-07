@@ -111,7 +111,7 @@ class Client:
                         allOrderCanceled = False
         return allOrderCanceled
 
-    def createOrder(self, address: str, pair: str, buy: bool, amount: int, price: int):
+    def createOrder(self, address: str, pair: str, buy: bool, amount: float, price: float):
         logging.debug(
             f'Calling createOrder with args: {address}, {pair}, {buy}')
         isValidAddress(address)
