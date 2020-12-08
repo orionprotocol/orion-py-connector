@@ -146,7 +146,6 @@ class Client:
         response = requests.post(
             url, dumps(payload), headers=headers)
 
-        print(response.json())
         if response.status_code == 200:
             return response.json()
         return None
