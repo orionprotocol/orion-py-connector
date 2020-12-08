@@ -4,7 +4,7 @@ from json import dumps
 import time
 import warnings
 import requests
-from orion_py_connector.tokens import VALID_PAIRS, isValidPair, getAssetsFromPair
+from orion_py_connector.tokens import VALID_PAIRS, isValidPair, getAssetsFromPair, getNumberFormat
 from orion_py_connector.utils import (DEFAULT_EXPIRATION, MATCHER_ADDRESS, MATCHER_FEE_PERCENT,
                                       isValidAddress, signEIP712Struct, hashOrder, toBaseUnit, Order, DeleteOrder)
 
@@ -117,7 +117,11 @@ class Client:
         isValidAddress(address)
         isValidPair(pair)
 
+        numberFormat = getNumberFormat(pair)
+
         assets = getAssetsFromPair(pair)
+        amount = round(amount, numberFormat['qtyPrecision'])
+        price = round(price, numberFormat['pricePrecision'])
         matcherFeeAsset = assets[0] if buy else assets[1]
         matcherFee = amount * MATCHER_FEE_PERCENT if buy else amount * \
             price * MATCHER_FEE_PERCENT
@@ -147,6 +151,7 @@ class Client:
         response = requests.post(
             url, dumps(payload), headers=headers)
 
+        print(response.json())
         if response.status_code == 200:
             return response.json()
         return None
