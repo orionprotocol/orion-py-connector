@@ -64,7 +64,7 @@ class Client:
         history = self.getOrderHistory(pair)
         if history == None:
             return None
-        open_orders = list(filter(lambda x: x['status'] == "OPEN", history))
+        open_orders = list(filter(lambda x: x['status'] == "ACCEPTED", history))
         return open_orders
 
     def getOrderbook(self, pair: str, depth: int = 20):
