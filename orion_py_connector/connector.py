@@ -15,6 +15,9 @@ logging.getLogger('orion_py_connector.connector').addHandler(
 headers = {'content-type': 'application/json'}
 
 
+OPEN_STATUS = ["NEW", "ACCEPTED", "ROUTING", "PARTIALLY_FILLED"]
+
+
 class Client:
     def __init__(self,
                  private_key: str,
@@ -64,7 +67,8 @@ class Client:
         history = self.getOrderHistory(pair)
         if history == None:
             return None
-        open_orders = list(filter(lambda x: x['status'] == "ACCEPTED", history))
+        open_orders = list(
+            filter(lambda x: x['status'] in OPEN_STATUS, history))
         return open_orders
 
     def getOrderbook(self, pair: str, depth: int = 20):
