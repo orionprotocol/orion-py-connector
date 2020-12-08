@@ -34,13 +34,6 @@ class DeleteOrder(EIP712Struct):
     senderAddress = Address()
     id = Uint(64)
 
-
-def isValidAddress(address: str) -> bool:
-    logging.debug(f'Calling isValidAddress with args: {address}')
-    isValidAddress = w3.isAddress(address)
-    return isValidAddress
-
-
 def signEIP712Struct(data: EIP712Struct, private_key: str) -> str:
     logging.debug(f'Calling signEIP712Struct with args: {data.data_dict()}')
     message = data.signable_bytes(EIP712_DOMAIN)

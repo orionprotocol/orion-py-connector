@@ -1,17 +1,5 @@
-from orion_py_connector.utils import hashOrder, isValidAddress, signEIP712Struct, Order
+from orion_py_connector.utils import hashOrder, signEIP712Struct, Order
 import pytest
-
-
-def test_isInvalidAddress():
-    isValid = isValidAddress(
-        '0xB0Fc7251682f639dcFc5beC6Dc86E30BA18Eb9f')
-    assert isValid == False
-
-
-def test_isValidAddress():
-    isValid = isValidAddress(
-        '0xB0Fc7251682f639dcFc5beC6Dc86E30BA18Eb9fc')
-    assert isValid
 
 
 def test_hashOrder():
