@@ -82,6 +82,17 @@ class Client:
             return response.json()
         return None
 
+    def getOrderInfo(self, orderId: int):
+        logging.debug(f'Calling getOrderInfo with args: {orderId}')
+
+        url = f'{self.backend_url}/order'
+        params = {'orderId': orderId}
+        response = requests.get(url, params)
+
+        if response.status_code == 200:
+            return response.json()
+        return None
+
     def cancelOrder(self, id: int) -> bool:
         logging.debug(f'Calling cancelOrder with args: {id}')
         cancelOrder = DeleteOrder(senderAddress=self.address, id=id)
@@ -92,8 +103,7 @@ class Client:
 
         print(payload)
         url = f'{self.backend_url}/order'
-        response = requests.request('delete',
-                                    url, json=dumps(payload), headers=headers)
+        response = requests.delete(url, data=dumps(payload), headers=headers)
 
         return response.status_code == 200
 
@@ -123,7 +133,7 @@ class Client:
         price = round(price, numberFormat['pricePrecision'])
         matcherFeeAsset = assets[0] if buy else assets[1]
         matcherFee = amount * MATCHER_FEE_PERCENT if buy else amount * \
-            price * MATCHER_FEE_PERCENT
+                                                              price * MATCHER_FEE_PERCENT
 
         currentTimestamp = int(time.time()*1000)
 
