@@ -88,5 +88,5 @@ def hashOrder(data: Order) -> str:
 
 
 def toBaseUnit(amount: float, decimals: int = 8) -> int:
-    return int(amount * 10 ** decimals)
+    return int(round(amount * 10 ** decimals))
 
