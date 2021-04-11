@@ -182,7 +182,7 @@ class Client:
 
         logging.info(f'Order: {payload}')
 
-        url = f'{self.backend_url}/order' + '/maker' if makerOnly else ''
+        url = f'{self.backend_url}/order' + ('/maker' if makerOnly else '')
         response = requests.post(
             url, dumps(payload), headers=headers)
 
