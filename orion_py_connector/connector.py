@@ -151,7 +151,7 @@ class Client:
 
         return allOrderCanceled
 
-    def createOrder(self, pair: str, buy: bool, amount: float, price: float, fee: float = None):
+    def createOrder(self, pair: str, buy: bool, amount: float, price: float, fee: float=None, makerOnly=False):
         if fee is None:
             fee = self.default_orn_fee
         logging.debug(
@@ -182,7 +182,7 @@ class Client:
 
         logging.info(f'Order: {payload}')
 
-        url = f'{self.backend_url}/order'
+        url = f'{self.backend_url}/order' + '/maker' if makerOnly else ''
         response = requests.post(
             url, dumps(payload), headers=headers)
 
