@@ -157,9 +157,10 @@ class Client:
         response = requests.get(url)
         if response.status_code != 200:
             raise Exception("Couldn't load Gas Price")
-        return FILL_ORDERS_GAS_LIMIT_FOR_FEE_CALCULATION*float(response.text)*self.getPrice(BASE_ASSET)/10e8
+        gasPrice = float(response.text.replace('"', ''))
+        return FILL_ORDERS_GAS_LIMIT_FOR_FEE_CALCULATION*gasPrice*self.getPriceByToken(BASE_ASSET)/1e18
 
-    def getPrice(self, asset) -> float:
+    def getPriceByToken(self, token) -> float:
         logging.debug(f'Loading Prices')
         url = f'{self.api_url}/prices'
         response = requests.get(url)
@@ -167,10 +168,13 @@ class Client:
             raise Exception("Couldn't load Prices")
 
         prices = response.json()
-        return prices[self.TOKENS.get(asset)]
+        return float(prices[token])
+
+    def getPrice(self, asset) -> float:
+        return self.getPriceByToken(self.TOKENS.get(asset))
 
     def getOrderFeeInOrn(self, amount: float, baseAsset: str) -> float:
-        return round(self.getPrice(baseAsset)*amount*PLATFORM_PERCENT + self.getNetworkFeeInOrn(), 4)
+        return round(self.getPrice(baseAsset)*amount*PLATFORM_PERCENT + self.getNetworkFeeInOrn(), 8)
 
     def createOrder(self, pair: str, buy: bool, amount: float, price: float, fee: float=None, makerOnly=False):
         if fee is None:
