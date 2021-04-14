@@ -1,8 +1,6 @@
 import logging
-from web3.auto import w3
 from json import dumps
 import time
-import warnings
 import requests
 from eth_account import Account
 from orion_py_connector.utils import (DEFAULT_EXPIRATION,
@@ -15,7 +13,9 @@ headers = {'content-type': 'application/json'}
 
 
 OPEN_STATUS = ["NEW", "ACCEPTED", "ROUTING", "PARTIALLY_FILLED"]
-
+FILL_ORDERS_GAS_LIMIT_FOR_FEE_CALCULATION = 200000
+BASE_ASSET = "0x0000000000000000000000000000000000000000"
+PLATFORM_PERCENT = 0.002 #0.2%
 
 class Client:
     def __init__(self,
@@ -151,9 +151,32 @@ class Client:
 
         return allOrderCanceled
 
+    def getNetworkFeeInOrn(self):
+        logging.debug(f'Loading Gas Price')
+        url = f'{self.api_url}/gasPrice'
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise Exception("Couldn't load Gas Price")
+        return FILL_ORDERS_GAS_LIMIT_FOR_FEE_CALCULATION*float(response.text)*self.getPrice(BASE_ASSET)/10e8
+
+    def getPrice(self, asset) -> float:
+        logging.debug(f'Loading Prices')
+        url = f'{self.api_url}/prices'
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise Exception("Couldn't load Prices")
+
+        prices = response.json()
+        return prices[self.TOKENS.get(asset)]
+
+    def getOrderFeeInOrn(self, amount: float, baseAsset: str) -> float:
+        return round(self.getPrice(baseAsset)*amount*PLATFORM_PERCENT + self.getNetworkFeeInOrn(), 4)
+
     def createOrder(self, pair: str, buy: bool, amount: float, price: float, fee: float=None, makerOnly=False):
         if fee is None:
-            fee = self.default_orn_fee
+            [baseCur, _] = self.splitPair(pair)
+            fee = self.getOrderFeeInOrn(amount, baseCur)
+
         logging.debug(
             f'Calling createOrder with args: {pair}, {buy}')
 
