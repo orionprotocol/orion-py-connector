@@ -82,6 +82,28 @@ class Client:
             return response.json()
         return None
 
+    def getReservedBalances(self):
+        logging.debug(f'Calling getReservedBalances')
+
+        url = f'{self.backend_url}/address/balance/reserved?address={self.address}'
+        response = requests.get(url)
+        if response.status_code == 200:
+            bal = response.json()
+            return {k.upper(): v for k, v in bal.items()}
+        return None
+
+    def getAvailableBalances(self):
+        logging.debug(f'Calling getAvailableBalances')
+
+        balance = self.getContractBalances()
+        reserved = self.getReservedBalances()
+
+        for r in reserved:
+            if r in balance:
+                balance[r] -= reserved[r]
+
+        return balance
+
     def getOrderHistory(self, pair: str):
         logging.debug(f'Calling getOrderHistory with args: {pair}')
 
@@ -108,6 +130,16 @@ class Client:
 
         url = f'{self.backend_url}/orderbook'
         params = {'pair': pair, 'depth': depth}
+        response = requests.get(url, params)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def getOrderbookExchange(self, pair: str, exchange:str, depth: int = 20):
+        logging.debug(f'Calling getOrderbook with args: {pair}, {depth}')
+
+        url = f'{self.backend_url}/orderbook/{exchange}/{pair}'
+        params = {'filterByBrokerBalances': True, 'depth': depth}
         response = requests.get(url, params)
         if response.status_code == 200:
             return response.json()
