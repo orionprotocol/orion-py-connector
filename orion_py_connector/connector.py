@@ -100,7 +100,7 @@ class Client:
 
         for r in reserved:
             if r in balance:
-                balance[r] -= reserved[r]
+                balance[r] = str(round(float(balance[r]) - float(reserved[r]), 8))
 
         return balance
 
