@@ -250,3 +250,24 @@ class Client:
         else:
             logging.error(f'Failed to create order: {response.text}')
         return None
+
+    def getMarketPrice(self, assetIn: str, amountIn: float, assetOut: str):
+        logging.debug(f'Loading market price for {amountIn} {assetIn} in {assetOut}')
+        url = ""
+        if assetIn == 'USDT':
+            url = f'{self.backend_url}/swap/marketPriceByCost?symbol={assetOut}-USDT&ordCost={amountIn}&isPoolAllowed=true'
+        elif assetOut == 'USDT':
+            url = f'{self.backend_url}/swap/marketPrice?symbol={assetIn}-USDT&ordQty={amountIn}&isPoolAllowed=true'
+        else:
+            url = f'{self.backend_url}/swap/marketPrice?symbol={assetIn}-{assetOut}&ordQty={amountIn}&isPoolAllowed=true'
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise Exception("Couldn't load market price")
+
+        res = response.json()
+        return {
+            'price': res['price'],
+            'cost': res['cost'],
+            'isPool': res['isPool'],
+            'availableQty': res['availableQty']
+        }
