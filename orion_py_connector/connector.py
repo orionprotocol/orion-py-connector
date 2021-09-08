@@ -107,7 +107,7 @@ class Client:
     def getOrderHistory(self, pair: str):
         logging.debug(f'Calling getOrderHistory with args: {pair}')
 
-        url = f'{self.backend_url}/orderHistory'
+        url = f'{self.backend_url}/order/history'
         [baseAsset, quoteAsset] = self.splitPair(pair)
         params = {'baseAsset': baseAsset, 'quoteAsset': quoteAsset, 'address': self.address}
         response = requests.get(url, params)
@@ -128,7 +128,7 @@ class Client:
     def getOrderbook(self, pair: str, depth: int = 20):
         logging.debug(f'Calling getOrderbook with args: {pair}, {depth}')
 
-        url = f'{self.backend_url}/orderbook'
+        url = f'{self.backend_url}/orderbook/'
         params = {'pair': pair, 'depth': depth}
         response = requests.get(url, params)
         if response.status_code == 200:
@@ -156,15 +156,13 @@ class Client:
             return response.json()
         return None
 
-    def cancelOrder(self, id: int) -> bool:
+    def cancelOrder(self, id: str) -> bool:
         logging.debug(f'Calling cancelOrder with args: {id}')
-        cancelOrder = DeleteOrder(senderAddress=self.address, id=id)
+        cancelOrder = DeleteOrder(sender=self.address, id=id, isPersonalSign=True)
         signature = signEIP712Struct(self.chain_id, cancelOrder, self.private_key)
 
-        payload = cancelOrder.data_dict()
-        payload['signature'] = signature
+        payload = {'id': id, 'sender': self.address, 'signature': signature, 'isPersonalSign': True}
 
-        print(payload)
         url = f'{self.backend_url}/order'
         response = requests.delete(url, data=dumps(payload), headers=headers)
 
@@ -176,7 +174,7 @@ class Client:
         allOrderCanceled = True
 
         for order in self.getOpenOrders(pair):
-            if order['id'] > 0:
+            if order['id']:
                 success = self.cancelOrder(order['id'])
                 if not success:
                     allOrderCanceled = False
@@ -253,21 +251,18 @@ class Client:
 
     def getMarketPrice(self, assetIn: str, amountIn: float, assetOut: str):
         logging.debug(f'Loading market price for {amountIn} {assetIn} in {assetOut}')
-        url = ""
-        if assetIn == 'USDT':
-            url = f'{self.backend_url}/swap/marketPriceByCost?symbol={assetOut}-USDT&ordCost={amountIn}&isPoolAllowed=true'
-        elif assetOut == 'USDT':
-            url = f'{self.backend_url}/swap/marketPrice?symbol={assetIn}-USDT&ordQty={amountIn}&isPoolAllowed=true'
-        else:
-            url = f'{self.backend_url}/swap/marketPrice?symbol={assetIn}-{assetOut}&ordQty={amountIn}&isPoolAllowed=true'
+        url = f'{self.backend_url}/swap?amountIn={amountIn}&assetIn={assetIn}&assetOut={assetOut}'
         response = requests.get(url)
         if response.status_code != 200:
             raise Exception("Couldn't load market price")
 
         res = response.json()
+
+        logging.info(f'Got swap: {res}')
+
         return {
-            'price': res['price'],
-            'cost': res['cost'],
-            'isPool': res['isPool'],
-            'availableQty': res['availableQty']
+            'price': res['orderPrice'],
+            'isPool': res['isThroughPoolOptimal'],
+            'availableQty': res['availableAmountIn'],
+            'qtyOut': res['amountOut']
         }
