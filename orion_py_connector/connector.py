@@ -260,8 +260,10 @@ class Client:
 
         logging.info(f'Got swap: {res}')
 
+        order_info = res['orderInfo']
+
         return {
-            'price': res['orderPrice'],
+            'price': order_info['safePrice'],
             'isPool': res['isThroughPoolOptimal'],
             'availableQty': res['availableAmountIn'],
             'qtyOut': res['amountOut']
