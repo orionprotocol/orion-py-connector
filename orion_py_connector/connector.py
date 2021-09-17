@@ -258,13 +258,26 @@ class Client:
 
         res = response.json()
 
-        logging.info(f'Got swap: {res}')
+        logging.debug(f'Got swap: {res}')
 
         order_info = res['orderInfo']
 
-        return {
-            'price': order_info['safePrice'],
+        side = order_info['side']
+        amount_out = res['amountOut']
+        available_amount_in = res['availableAmountIn']
+
+        # amount_out / available_amount_in if(side == 'SELL') else available_amount_in / amount_out
+        price = res['marketPrice'] if(side == 'SELL') else 1 / res['marketPrice']
+
+        result = {
+            'price': price,
+            'safePrice': order_info['safePrice'],
             'isPool': res['isThroughPoolOptimal'],
-            'availableQty': res['availableAmountIn'],
-            'qtyOut': res['amountOut']
+            'availableQty': available_amount_in,
+            'qtyOut': amount_out,
+            'side': side,
         }
+
+        logging.info(f'Got market price {result}')
+
+        return result
