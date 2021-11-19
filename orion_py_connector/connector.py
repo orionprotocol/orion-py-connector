@@ -82,6 +82,15 @@ class Client:
             return response.json()
         return None
 
+    def getAvailableBalancesImpl(self):
+        logging.debug(f'Calling getAvailableBalancesImpl')
+
+        url = f'{self.api_url}/broker/getAvailableBalance/{self.address}'
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
     def getReservedBalances(self):
         logging.debug(f'Calling getReservedBalances')
 
@@ -92,10 +101,10 @@ class Client:
             return {k.upper(): v for k, v in bal.items()}
         return None
 
-    def getAvailableBalances(self):
+    def getAvailableBalances(self, only_contract=True):
         logging.debug(f'Calling getAvailableBalances')
 
-        balance = self.getContractBalances()
+        balance = self.getContractBalances() if only_contract else self.getAvailableBalancesImpl()
         reserved = self.getReservedBalances()
 
         for r in reserved:
@@ -201,7 +210,7 @@ class Client:
         return float(prices[token])
 
     def getPrice(self, asset) -> float:
-        return self.getPriceByToken(self.TOKENS.get(asset))
+        return self.getPriceByToken(self.TOKENS.get(asset)) / self.getPriceByToken(self.orn_address)
 
     def getOrderFeeInOrn(self, amount: float, baseAsset: str) -> float:
         return round(self.getPrice(baseAsset)*amount*PLATFORM_PERCENT + self.getNetworkFeeInOrn(), 8)
