@@ -1,7 +1,7 @@
 from web3.auto import w3
 from eth_account.messages import SignableMessage, HexBytes
 from eth_account import Account
-from eip712_structs import EIP712Struct, make_domain, Address, String, Uint, Bytes
+from eip712_structs import EIP712Struct, make_domain, Address, String, Uint, Bytes, Boolean
 import logging
 
 logging.getLogger('orion_py_connector.utils').addHandler(
@@ -31,7 +31,8 @@ class Order(EIP712Struct):
 
 class DeleteOrder(EIP712Struct):
     senderAddress = Address()
-    id = Uint(64)
+    isPersonalSign = Boolean()
+    id = String()
 
 def signEIP712Struct(chain_id: int, data: EIP712Struct, private_key: str) -> str:
     logging.debug(f'Calling signEIP712Struct with args: {data.data_dict()}')
