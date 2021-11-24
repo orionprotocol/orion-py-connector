@@ -270,17 +270,23 @@ class Client:
         logging.debug(f'Got swap: {res}')
 
         order_info = res['orderInfo']
-
-        side = order_info['side']
         amount_out = res['amountOut']
         available_amount_in = res['availableAmountIn']
+        side = 'SELL'
 
-        # amount_out / available_amount_in if(side == 'SELL') else available_amount_in / amount_out
-        price = res['marketPrice'] if(side == 'SELL') else 1 / res['marketPrice']
+        if (order_info):
+            side = order_info['side']
+
+            # amount_out / available_amount_in if(side == 'SELL') else available_amount_in / amount_out
+            price = res['marketPrice'] if(side == 'SELL') else 1 / res['marketPrice']
+            safePrice = order_info['safePrice']
+        else:
+            price = 0
+            safePrice = 0
 
         result = {
             'price': price,
-            'safePrice': order_info['safePrice'],
+            'safePrice': safePrice,
             'isPool': res['isThroughPoolOptimal'],
             'availableQty': available_amount_in,
             'qtyOut': amount_out,
