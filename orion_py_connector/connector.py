@@ -154,11 +154,11 @@ class Client:
             return response.json()
         return None
 
-    def getOrderInfo(self, orderId: int):
+    def getOrderInfo(self, orderId: int, owner: str):
         logging.debug(f'Calling getOrderInfo with args: {orderId}')
 
         url = f'{self.backend_url}/order'
-        params = {'orderId': orderId}
+        params = {'orderId': orderId, 'owner': owner}
         response = requests.get(url, params)
 
         if response.status_code == 200:
